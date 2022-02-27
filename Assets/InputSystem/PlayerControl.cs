@@ -5,8 +5,10 @@ using UnityEngine.InputSystem;
 
 public class PlayerControl : MonoBehaviour
 {
-    public float moveSpeed = 10.0f;
-    public float jumpPower = 20.0f;
+    public float walkSpeed = 6.0f;
+    public float runSpeed = 10.0f;
+    public float jumpPower = 5.0f;
+    private float _moveSpeed;
 
     public float lookSpeed = 0.75f;
     public float vertLimit = 85.0f;
@@ -19,40 +21,54 @@ public class PlayerControl : MonoBehaviour
 
     private GameObject _playerCamera;
     private Rigidbody _rb;
+    private PlayerInput _input;
 
     private void Awake()
     {
         _playerCamera = transform.Find("PlayerCam").gameObject;
         _rb = GetComponent<Rigidbody>();
+        _moveSpeed = walkSpeed;
 
-        UnityEngine.Cursor.visible = false;
+        Cursor.visible = false;
         Cursor.lockState = CursorLockMode.Locked;
 
         Rigidbody body = GetComponent<Rigidbody>();
         if (body != null)
             body.freezeRotation = true;
+
+
+        _input = new PlayerInput();
+        
+        _input.Player.Jump.performed += context => Jump();
+
+        _input.Player.Sprint.performed += context => _moveSpeed = runSpeed;
+        _input.Player.Sprint.canceled += context => _moveSpeed = walkSpeed;
+
+        Debug.Log(_input);
+    }
+
+    private void OnEnable()
+    {
+        _input.Player.Enable();
+    }
+    private void OnDisable()
+    {
+        _input.Player.Disable();
     }
 
     private void Update()
     {
+        _moveDirection = _input.Player.Move.ReadValue<Vector2>();
         Move();
+
+        _lookDirection = _input.Player.Look.ReadValue<Vector2>();
         Look();
-    }
-
-    public void OnMove(InputAction.CallbackContext context)
-    {
-        _moveDirection = context.ReadValue<Vector2>();
-    }
-
-    public void OnLook(InputAction.CallbackContext context)
-    {
-        _lookDirection = context.ReadValue<Vector2>();
     }
 
     public void Move()
     {
-        Vector3 moveDirection = new Vector3(_moveDirection.x, 0, _moveDirection.y);
-        moveDirection = Vector3.ClampMagnitude(moveDirection * moveSpeed, moveSpeed);
+        Vector3 moveDirection = new Vector3(_moveDirection.x * _moveSpeed, 0, _moveDirection.y * _moveSpeed);
+        moveDirection = Vector3.ClampMagnitude(moveDirection, _moveSpeed);
         moveDirection *= Time.deltaTime;
 
         moveDirection = transform.TransformDirection(moveDirection);
@@ -69,15 +85,11 @@ public class PlayerControl : MonoBehaviour
     {
         if (_isGrounded)
         {
-            _rb.AddForce(Vector3.up * jumpPower, ForceMode.Impulse);
+            _rb.AddForce(Vector3.up * jumpPower * _rb.mass, ForceMode.Impulse);
         }
     }
-    public void Sprint()
-    {
 
-    }
-
-    private void OnCollisionEnter(Collision other)
+    private void OnCollisionStay(Collision other)
     {
         if (other.gameObject.CompareTag("Ground"))
             _isGrounded = true;

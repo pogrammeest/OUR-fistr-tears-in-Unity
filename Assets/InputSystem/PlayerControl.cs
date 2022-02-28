@@ -10,22 +10,25 @@ public class PlayerControl : MonoBehaviour
     public float jumpPower = 5.0f;
     private float _moveSpeed;
 
-    public float lookSpeed = 0.75f;
+    public float lookSpeed = 0.11f;
     public float vertLimit = 85.0f;
 
     private Vector2 _moveDirection;
-    public bool _isGrounded;
 
     private Vector2 _lookDirection;
     private float _vertRotation;
 
     private GameObject _playerCamera;
+    private GameObject _gun;
+    PlayerStates states;
     private Rigidbody _rb;
     private PlayerInput _input;
 
     private void Awake()
     {
         _playerCamera = transform.Find("PlayerCam").gameObject;
+        _gun = transform.Find("Gun").gameObject;
+
         _rb = GetComponent<Rigidbody>();
         _moveSpeed = walkSpeed;
 
@@ -36,6 +39,8 @@ public class PlayerControl : MonoBehaviour
         if (body != null)
             body.freezeRotation = true;
 
+        states = GetComponent<PlayerStates>();
+
 
         _input = new PlayerInput();
         
@@ -44,7 +49,7 @@ public class PlayerControl : MonoBehaviour
         _input.Player.Sprint.performed += context => _moveSpeed = runSpeed;
         _input.Player.Sprint.canceled += context => _moveSpeed = walkSpeed;
 
-        Debug.Log(_input);
+        _input.Player.Shoot.performed += context => Shoot();
     }
 
     private void OnEnable()
@@ -79,25 +84,30 @@ public class PlayerControl : MonoBehaviour
         transform.Rotate(0, _lookDirection.x * lookSpeed, 0);
         _vertRotation -= _lookDirection.y * lookSpeed;
         _vertRotation = Mathf.Clamp(_vertRotation, -vertLimit, vertLimit);
+
         _playerCamera.transform.localEulerAngles = new Vector3 (_vertRotation, 0, 0);
+        _gun.transform.localEulerAngles = new Vector3 (_vertRotation/2, 0, 0);
     }
     public void Jump()
     {
-        if (_isGrounded)
+        if (states.isGrounded)
         {
             _rb.AddForce(Vector3.up * jumpPower * _rb.mass, ForceMode.Impulse);
         }
     }
 
-    private void OnCollisionStay(Collision other)
+    public void Shoot()
     {
-        if (other.gameObject.CompareTag("Ground"))
-            _isGrounded = true;
-    }
+        Ray ray = new Ray(_playerCamera.transform.position, _playerCamera.transform.forward);
 
-    private void OnCollisionExit(Collision other)
-    {
-        if (other.gameObject.CompareTag("Ground"))
-            _isGrounded = false;
+        RaycastHit hit;
+
+        if (Physics.Raycast(ray, out hit))
+        {
+            if (hit.collider.gameObject.GetComponent<PlayerStates>())
+            {
+                hit.collider.gameObject.GetComponent<PlayerStates>().OnHit();
+            }          
+        }
     }
 }

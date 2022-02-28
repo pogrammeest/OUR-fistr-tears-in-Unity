@@ -19,6 +19,7 @@ public class PlayerControl : MonoBehaviour
     private float _vertRotation;
 
     private GameObject _playerCamera;
+    private GameObject _camObjects;
     private GameObject _gun;
     PlayerStates states;
     private Rigidbody _rb;
@@ -26,8 +27,9 @@ public class PlayerControl : MonoBehaviour
 
     private void Awake()
     {
-        _playerCamera = transform.Find("PlayerCam").gameObject;
-        _gun = transform.Find("Gun").gameObject;
+        _camObjects = transform.Find("CamObj").gameObject;
+        _playerCamera = _camObjects.transform.Find("PlayerCam").gameObject;
+        _gun = _camObjects.transform.Find("Gun").gameObject;
 
         _rb = GetComponent<Rigidbody>();
         _moveSpeed = walkSpeed;
@@ -85,8 +87,8 @@ public class PlayerControl : MonoBehaviour
         _vertRotation -= _lookDirection.y * lookSpeed;
         _vertRotation = Mathf.Clamp(_vertRotation, -vertLimit, vertLimit);
 
-        _playerCamera.transform.localEulerAngles = new Vector3 (_vertRotation, 0, 0);
-        _gun.transform.localEulerAngles = new Vector3 (_vertRotation/2, 0, 0);
+        _camObjects.transform.localEulerAngles = new Vector3 (_vertRotation, 0, 0);
+        _gun.transform.localEulerAngles = new Vector3 (_vertRotation/20, 0, 0);
     }
     public void Jump()
     {
